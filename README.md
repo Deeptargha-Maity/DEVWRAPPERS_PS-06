@@ -72,5 +72,12 @@ This application is ready to be deployed for free on [Render](https://render.com
 2. Set the **Build Command** to: `pip install -r requirements.txt`
 3. Set the **Start Command** to: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
 
+## 🌐 Live Demo
+
+The project is deployed and accessible online:
+
+👉 Official Website: https://er-command.onrender.com
+
+You can explore all features directly through the live interface without any local setup.
 ---
 *Built by Deeptargha Maity🍃 (DEVWRAPPERS)*
