@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>ER Command — Emergency Room Management System</title>
+  <meta name="description" content="Real-time Emergency Room Management System with dynamic patient prioritization, bed allocation, and MCI mode." />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<div id="mci-banner">MASS CASUALTY INCIDENT MODE ACTIVE — SURVIVAL PRIORITY ENGAGED</div>
+
+<header>
+  <div class="logo">
+    <div class="icon">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-1 10h-4v4h-4v-4H6v-2h4V7h4v4h4v2z"/></svg>
+    </div>
+    <span>ER Command</span>
+  </div>
+  <div class="header-right">
+    <span id="mode-chip" class="mode-chip">NORMAL MODE</span>
+    <div class="mci-toggle-wrap">
+      <span class="mci-label">MCI Mode</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="mci-toggle" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="ws-status">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-label">Connecting</span>
+    </div>
+  </div>
+</header>
+
+<div class="stats-row" style="max-width:1600px;margin:20px auto 0;padding:0 24px;">
+  <div class="stat-card red">
+    <div class="stat-value" id="stat-critical">0</div>
+    <div class="stat-label">Critical Patients</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-value" id="stat-waiting">0</div>
+    <div class="stat-label">Awaiting Beds</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="stat-available">50</div>
+    <div class="stat-label">Beds Available</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-value" id="stat-total">0</div>
+    <div class="stat-label">Total Patients</div>
+  </div>
+</div>
+
+<div id="alert-box" style="max-width:1600px;margin:12px auto 0;padding:0 24px;"></div>
+
+<div class="main-grid">
+
+  <!-- LEFT: Patient Queue + Bed Status -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></span>
+          Priority Queue <span id="queue-count" style="font-size:0.78rem;font-weight:500;color:var(--text-muted)">(0 patients)</span>
+        </span>
+        <div class="queue-controls">
+          <button class="filter-btn active" data-filter="all" id="filter-all">All</button>
+          <button class="filter-btn" data-filter="waiting" id="filter-waiting">Waiting</button>
+          <button class="filter-btn" data-filter="assigned" id="filter-assigned">Assigned</button>
+          <button class="filter-btn" data-filter="reservations" id="filter-reservations">Reservations</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-top:14px;">
+        <div id="patient-queue">
+          <div class="shimmer"></div>
+          <div class="shimmer" style="height:60px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bed Status -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2V10c0-2.21-1.79-4-4-4z"/></svg></span>
+          Bed Status
+        </span>
+        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:500;" id="bed-summary-label">50 available</span>
+      </div>
+      <div class="card-body">
+        <div class="bed-legend">
+          <span class="bed-legend-item avail">
+            <span class="bed-legend-dot avail"></span>Available
+          </span>
+          <span class="bed-legend-item occ">
+            <span class="bed-legend-dot occ"></span>Occupied
+          </span>
+          <span class="bed-legend-item res">
+            <span class="bed-legend-dot res"></span>Reserved
+          </span>
+        </div>
+        <div id="bed-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Sidebar -->
+  <div class="sidebar">
+
+    <!-- Add Patient -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
+          Add Patient
+        </span>
+      </div>
+      <div class="card-body">
+        <form id="add-patient-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="p-name">Full Name</label>
+              <input class="form-control" id="p-name" type="text" placeholder="Jane Doe" required />
+            </div>
+            <div class="form-group">
+              <label for="p-age">Age</label>
+              <input class="form-control" id="p-age" type="number" min="1" max="120" placeholder="35" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="p-severity">Severity Level</label>
+            <select class="form-control" id="p-severity">
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="p-complaint">Chief Complaint</label>
+            <input class="form-control" id="p-complaint" type="text" placeholder="Chest pain, difficulty breathing…" required />
+          </div>
+          <div class="form-group">
+            <label for="p-survival">Survival Probability (MCI) <span style="color:var(--text-muted)">0–1</span></label>
+            <input class="form-control" id="p-survival" type="number" min="0" max="1" step="0.01" value="0.75" />
+          </div>
+          <button type="submit" class="btn-primary">Add to Queue</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Pre-Arrival Reservation -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="card-icon"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></span>
+          Pre-Arrival Reservation
+        </span>
+      </div>
+      <div class="card-body">
+        <form id="reserve-form" class="reserve-form">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="r-ambulance">Ambulance ID</label>
+            <input class="form-control" id="r-ambulance" type="text" placeholder="AMB-001" required />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="r-patient">Patient Name</label>
+            <input class="form-control" id="r-patient" type="text" placeholder="John Smith" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="r-severity">Severity</label>
+              <select class="form-control" id="r-severity">
+                <option value="critical">Critical</option>
+                <option value="high" selected>High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="r-eta">ETA (min)</label>
+              <input class="form-control" id="r-eta" type="number" min="1" max="120" value="15" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Reserve Bed</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="site-footer">
+  <span>ER Command v1.0 — Real-Time Emergency Room Management | Built by Deeptargha Maity🍃 (DEVWRAPPERS)</span>
+  <span>System Status: <span id="footer-status" style="color:var(--teal-400);">Operational</span></span>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
