@@ -1,7 +1,8 @@
 /* ── ER Command — app.js ──────────────────────────────────────────────────── */
 
-const API = 'http://localhost:8000';
-const WS_URL = 'ws://localhost:8000/ws';
+const API = ''; // Empty string forces fetch() to use the current host (relative path)
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = `${wsProtocol}//${window.location.host}/ws`;
 
 let ws = null;
 let wsReconnectTimer = null;
